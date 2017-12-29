@@ -46,7 +46,7 @@ class WaypointUpdater(object):
         rospy.Subscriber('/current_pose', PoseStamped, self.current_position_cb)
         rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
         rospy.Subscriber('/obstacle_waypoints', PoseStamped, self.obstacle_cb)
-        rospy.Subscriber('/traffic_waypoints', Int32, self.traffic_cb)
+        rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_cb)
         rospy.Subscriber('/current_velocity', TwistStamped, self.current_velocity_cb)
 
         self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)
@@ -232,11 +232,9 @@ class WaypointUpdater(object):
         self.number_of_waypoints = len(self.lane.waypoints)
 
     def traffic_cb(self, msg):
-        # rospy.loginfo("TL received: %s", msg)
         self.next_stopline_waypoint = msg.data
-        if self.next_stopline_waypoint > 0 and self.number_of_waypoints is not None:
-            self.next_stopline_waypoint = (
-                                          self.next_stopline_waypoint - 5 + self.number_of_waypoints) % self.number_of_waypoints
+        if self.next_stopline_waypoint != UNKNOWN and self.number_of_waypoints is not None:
+            self.next_stopline_waypoint = (self.next_stopline_waypoint - 5 + self.number_of_waypoints) % self.number_of_waypoints
 
     def obstacle_cb(self, msg):
         # TODO: Callback for /obstacle_waypoint message. We will implement it later
