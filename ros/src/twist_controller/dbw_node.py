@@ -6,7 +6,6 @@ from dbw_mkz_msgs.msg import ThrottleCmd, SteeringCmd, BrakeCmd, SteeringReport
 from geometry_msgs.msg import TwistStamped
 from twist_controller import Controller
 
-
 '''
 You can build this node only after you have built (or partially built) the `waypoint_updater` node.
 
@@ -32,18 +31,19 @@ that we have created in the `__init__` function.
 
 FREQUENCY_IN_HERTZ = 50.0
 
+
 class DBWNode(object):
     """
     Represents drive by wire controller.
     Receives current and requested steering/velocities, calculates throttle, brake and steering commands and
     publishes them to the vehicle.
     """
+
     def __init__(self):
         rospy.init_node('dbw_node')
 
         vehicle_mass = rospy.get_param('~vehicle_mass', 1736.35)
         fuel_capacity = rospy.get_param('~fuel_capacity', 13.5)
-        brake_deadband = rospy.get_param('~brake_deadband', .1)
         deceleration_limit_in_mps = rospy.get_param('~decel_limit', -5)
         acceleration_limit_in_mps = rospy.get_param('~accel_limit', 1.)
         wheel_radius = rospy.get_param('~wheel_radius', 0.2413)
@@ -68,8 +68,7 @@ class DBWNode(object):
                                      deceleration_limit=deceleration_limit_in_mps,
                                      wheel_base=wheel_base, wheel_radius=wheel_radius,
                                      steer_ratio=steer_ratio, max_lat_acceleration=max_lat_acceleration,
-                                     max_steer_angle=max_steer_angle, brake_deadband=brake_deadband,
-                                     min_speed=min_speed)
+                                     max_steer_angle=max_steer_angle, min_speed=min_speed)
 
         self.current_velocity = None
         self.twist_cmd = None

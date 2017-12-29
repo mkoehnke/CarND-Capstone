@@ -13,6 +13,7 @@ K_D = 0.
 
 MIN_VELOCITY = 0.1
 
+
 class Controller(object):
     """
     Acceleration and steering controller.
@@ -20,9 +21,10 @@ class Controller(object):
     Steering is calculated using YawController which simply calculates needed angle to keep needed velocity,
     after that steering is smoothed using low pass filter.
     """
+
     def __init__(self, vehicle_mass, fuel_capacity, acceleration_limit, deceleration_limit,
                  wheel_base, wheel_radius, steer_ratio,
-                 max_lat_acceleration, max_steer_angle, brake_deadband, min_speed):
+                 max_lat_acceleration, max_steer_angle, min_speed):
 
         self.velocity_controller = pid.PID(kp=K_P, ki=K_I, kd=K_D, mn=deceleration_limit, mx=acceleration_limit)
 
@@ -34,8 +36,7 @@ class Controller(object):
 
         self.total_mass = vehicle_mass + (fuel_capacity * GAS_DENSITY)
         self.wheel_radius = wheel_radius
-        self.brake_deadband = brake_deadband
-        self.decel_limit = deceleration_limit
+        self.deceleration_limit = deceleration_limit
 
     def control(self, twist_cmd, current_velocity, time_span):
         """
@@ -61,12 +62,12 @@ class Controller(object):
 
         # Try to stop the car completely in case requested velocity is zero and current velocity is small enough
         if np.isclose(twist_cmd.twist.linear.x, 0.) and current_velocity.twist.linear.x < MIN_VELOCITY:
-            return 0., self.calc_torque(self.decel_limit), steer
+            return 0., self.calc_torque(self.deceleration_limit), steer
         else:
             if acceleration > 0:
                 return acceleration, 0., steer
             else:
-                torque = self.calc_torque(-acceleration,)
+                torque = self.calc_torque(-acceleration, )
                 return 0., torque, steer
 
     def calc_torque(self, acceleration):
@@ -74,4 +75,3 @@ class Controller(object):
 
     def reset(self):
         self.velocity_controller.reset()
-        self.yaw_filter.reset()

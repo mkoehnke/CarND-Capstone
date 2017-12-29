@@ -5,17 +5,18 @@ import os
 import cv2
 import rospy
 
-MODEL_PATH = os.path.dirname(
-    os.path.realpath(__file__)) + '/../../../../data/traffic_light_model/tl_frozen_inference_graph.pb'
+MODEL_PATH = os.path.dirname(os.path.realpath(__file__)) + '/../../../../data/traffic_light_model/tl_frozen_inference_graph.pb'
 LABEL_PATH = os.path.dirname(os.path.realpath(__file__)) + '/../../../../data/traffic_light_model/tl_label_map.pbtxt'
+IMAGE_PATH = os.path.dirname(os.path.realpath(__file__)) + '/../../../../test_images/simulator/'
 IMAGE_WIDTH = 300
 IMAGE_HEIGHT = 300
-
+RECORD_IMAGES = False
 
 class TLClassifier(object):
     def __init__(self):
         self.model_graph = None
         self.session = None
+        self.image_counter = 0
         self.classes = {1: TrafficLight.RED,
                         2: TrafficLight.YELLOW,
                         3: TrafficLight.GREEN,
@@ -33,8 +34,10 @@ class TLClassifier(object):
 
         """
         class_index, probability = self.predict(image)
+
         if class_index is not None:
             rospy.logdebug("class: %d, probability: %f", class_index, probability)
+
         return class_index
 
     def load_model(self):
@@ -55,8 +58,7 @@ class TLClassifier(object):
         detection_boxes = self.model_graph.get_tensor_by_name('detection_boxes:0')
         detection_scores = self.model_graph.get_tensor_by_name('detection_scores:0')
         detection_classes = self.model_graph.get_tensor_by_name('detection_classes:0')
-        image_np = cv2.resize(image_np, (IMAGE_WIDTH, IMAGE_HEIGHT))
-        image_np = cv2.cvtColor(image_np, cv2.COLOR_BGR2RGB)
+        image_np = self.process_image(image_np)
 
         (boxes, scores, classes) = self.session.run(
             [detection_boxes, detection_scores, detection_classes],
@@ -69,9 +71,21 @@ class TLClassifier(object):
         for i, box in enumerate(boxes):
             if scores[i] > min_score_thresh:
                 light_class = self.classes[classes[i]]
+                self.save_image(image_np, light_class)
                 rospy.logdebug("Traffic Light Class detected: %d", light_class)
                 return light_class, scores[i]
-
-        #rospy.logdebug("Traffic Light Class not detected")
+            else:
+                self.save_image(image_np, TrafficLight.UNKNOWN)
 
         return None, None
+
+    def process_image(self, image):
+        image = cv2.resize(image, (IMAGE_WIDTH, IMAGE_HEIGHT))
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        return image
+
+    def save_image(self, image, light_class):
+        if RECORD_IMAGES:
+            bgr_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+            cv2.imwrite(os.path.join(IMAGE_PATH, "image_%04i_%d.jpg" % (self.image_counter, light_class)), bgr_image)
+            self.image_counter += 1
