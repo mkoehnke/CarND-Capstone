@@ -3,5 +3,6 @@
 build
 devel
 .idea/
+test_images/
 
 profile.tmp
