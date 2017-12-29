@@ -29,7 +29,7 @@ LOOKAHEAD_WPS = 50
 SAFETY_BUFFER = 0.5
 UNKNOWN = -1
 MAX_DISTANCE = sys.maxint
-FREQUENCY = 10.0
+FREQUENCY_IN_HERTZ = 10.0
 
 
 class State(Enum):
@@ -54,28 +54,22 @@ class WaypointUpdater(object):
 
         self.lane = None
         self.number_of_waypoints = None
-
-        # Declaration of variables
-        self.current_position = self.current_velocity_in_mps = self.next_stopline_waypoint = self.current_state = self.state_changed = None
+        self.current_position = None
+        self.current_velocity_in_mps = None
+        self.next_stopline_waypoint = UNKNOWN
+        self.current_state = State.DECELERATION
+        self.state_changed = True
+        self.final_waypoints = None
 
         self.acceleration_limit_in_mps = rospy.get_param('~accel_limit', 1.)
         self.deceleration_limit_max_in_mps = -rospy.get_param('~decel_limit', -5.)
         self.deceleration_limit_min_in_mps = min(1.0, -rospy.get_param('~decel_limit', -5.) / 2.)
         self.max_velocity_in_mps = rospy.get_param('/waypoint_loader/velocity') / 3.6
 
-        self.initVariables()
         self.loop()
 
-    def initVariables(self):
-        self.current_position = None
-        self.current_velocity_in_mps = None
-        self.next_stopline_waypoint = UNKNOWN
-        self.current_state = State.ACCELERATION
-        self.state_changed = True
-        self.final_waypoints = None
-
     def loop(self):
-        rate = rospy.Rate(FREQUENCY)
+        rate = rospy.Rate(FREQUENCY_IN_HERTZ)
         while not rospy.is_shutdown():
             self.publish_final_wps()
             rate.sleep()
@@ -106,7 +100,7 @@ class WaypointUpdater(object):
 
         return waypoint_index
 
-    def start_acceleration(self, lane, current_waypoint_index):
+    def accelerate(self, lane, current_waypoint_index):
         acceleration = self.acceleration_limit_in_mps
         current_velocity = self.current_velocity_in_mps
         target_velocity = self.current_velocity_in_mps
@@ -125,7 +119,7 @@ class WaypointUpdater(object):
             lane.waypoints.append(current_waypoint)
             i += 1
 
-    def start_deceleration(self, lane, current_waypoint_index):
+    def decelerate(self, lane, current_waypoint_index):
         current_velocity = self.current_velocity_in_mps
         target_velocity = self.current_velocity_in_mps
         distance = self.distance_of_positions(self.current_position, self.lane.waypoints[
@@ -195,11 +189,11 @@ class WaypointUpdater(object):
 
         # Handle states
         if self.current_state == State.ACCELERATION and self.state_changed:
-            self.start_acceleration(lane, waypoint_index)
+            self.accelerate(lane, waypoint_index)
         elif self.current_state == State.ACCELERATION and not self.state_changed:
             self.continue_with_current_state(lane, waypoint_index, self.max_velocity_in_mps)
         elif self.current_state == State.DECELERATION and self.state_changed:
-            self.start_deceleration(lane, waypoint_index)
+            self.decelerate(lane, waypoint_index)
         elif self.current_state == State.DECELERATION and not self.state_changed:
             self.continue_with_current_state(lane, waypoint_index, 0)
         else:
@@ -238,7 +232,6 @@ class WaypointUpdater(object):
 
     def obstacle_cb(self, msg):
         # TODO: Callback for /obstacle_waypoint message. We will implement it later
-        # rospy.loginfo("Obstacle received: %s", msg.pose.position)
         pass
 
     def current_velocity_cb(self, msg):
