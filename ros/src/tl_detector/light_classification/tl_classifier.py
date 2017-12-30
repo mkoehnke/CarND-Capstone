@@ -4,9 +4,8 @@ import numpy as np
 import os
 import cv2
 import rospy
+import yaml
 
-MODEL_PATH = os.path.dirname(os.path.realpath(__file__)) + '/../../../../data/traffic_light_model/tl_frozen_inference_graph.pb'
-LABEL_PATH = os.path.dirname(os.path.realpath(__file__)) + '/../../../../data/traffic_light_model/tl_label_map.pbtxt'
 IMAGE_PATH = os.path.dirname(os.path.realpath(__file__)) + '/../../../../test_images/simulator/'
 IMAGE_WIDTH = 300
 IMAGE_HEIGHT = 300
@@ -21,7 +20,10 @@ class TLClassifier(object):
                         2: TrafficLight.YELLOW,
                         3: TrafficLight.GREEN,
                         4: TrafficLight.UNKNOWN}
-        self.load_model()
+
+        config_string = rospy.get_param("/traffic_light_config")
+        self.config = yaml.load(config_string)
+        self.load_model(self.get_model_path())
 
     def get_classification(self, image):
         """Determines the color of the traffic light in the image
@@ -40,7 +42,7 @@ class TLClassifier(object):
 
         return class_index
 
-    def load_model(self):
+    def load_model(self, model_path):
         config = tf.ConfigProto()
         config.graph_options.optimizer_options.global_jit_level = tf.OptimizerOptions.ON_1
 
@@ -48,7 +50,7 @@ class TLClassifier(object):
         with tf.Session(graph=self.model_graph, config=config) as sess:
             self.session = sess
             od_graph_def = tf.GraphDef()
-            with tf.gfile.GFile(MODEL_PATH, 'rb') as fid:
+            with tf.gfile.GFile(model_path, 'rb') as fid:
                 serialized_graph = fid.read()
                 od_graph_def.ParseFromString(serialized_graph)
                 tf.import_graph_def(od_graph_def, name='')
@@ -89,3 +91,6 @@ class TLClassifier(object):
             bgr_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
             cv2.imwrite(os.path.join(IMAGE_PATH, "image_%04i_%d.jpg" % (self.image_counter, light_class)), bgr_image)
             self.image_counter += 1
+
+    def get_model_path(self):
+        return os.path.dirname(os.path.realpath(__file__)) + self.config['detection_model']
