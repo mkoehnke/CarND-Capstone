@@ -5,4 +5,4 @@ camera_info:
   image_height: 600
 stop_line_positions:
     - [8.0, 16.2]
-detection_model: '/../../../../data/traffic_light_detection_model/car/tl_frozen_inference_graph.pb'
+detection_model: '/../../../../data/traffic_light_detection_model/real/frozen_inference_graph.pb'

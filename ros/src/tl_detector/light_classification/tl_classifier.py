@@ -7,8 +7,8 @@ import rospy
 import yaml
 
 IMAGE_PATH = os.path.dirname(os.path.realpath(__file__)) + '/../../../../test_images/simulator/'
-IMAGE_WIDTH = 300
-IMAGE_HEIGHT = 300
+MAX_IMAGE_WIDTH = 300
+MAX_IMAGE_HEIGHT = 300
 RECORD_IMAGES = False
 
 class TLClassifier(object):
@@ -82,7 +82,7 @@ class TLClassifier(object):
         return None, None
 
     def process_image(self, image):
-        image = cv2.resize(image, (IMAGE_WIDTH, IMAGE_HEIGHT))
+        image = cv2.resize(image, (MAX_IMAGE_WIDTH, MAX_IMAGE_HEIGHT))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return image
 
@@ -94,3 +94,18 @@ class TLClassifier(object):
 
     def get_model_path(self):
         return os.path.dirname(os.path.realpath(__file__)) + self.config['detection_model']
+
+    def resize_image(self, image):
+        height, width = image.shape[:2]
+
+        # only shrink if img is bigger than required
+        if MAX_IMAGE_HEIGHT < height or MAX_IMAGE_WIDTH < width:
+            # get scaling factor
+            scaling_factor = MAX_IMAGE_HEIGHT / float(height)
+            if MAX_IMAGE_WIDTH / float(width) < scaling_factor:
+                scaling_factor = MAX_IMAGE_WIDTH / float(width)
+            # resize image
+            image = cv2.resize(image, None, fx=scaling_factor, fy=scaling_factor, interpolation=cv2.INTER_AREA)
+
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        return image
